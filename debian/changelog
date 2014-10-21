@@ -1,4 +1,4 @@
-plinth (0.4.1-1) UNRELEASED; urgency=medium
+plinth (0.4.1-1) unstable; urgency=medium
 
   * New upstream version 0.4.1.
   * Remove install override which is no longer required. Upstream
