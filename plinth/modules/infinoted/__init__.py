@@ -29,6 +29,7 @@ from plinth import service as service_module
 from plinth.utils import format_lazy
 from plinth.views import ServiceView
 
+
 version = 1
 
 depends = ['apps']
@@ -45,9 +46,9 @@ description = [
     _('infinoted is a server for Gobby, a collaborative text editor.'),
 
     format_lazy(
-        _('To use it, <a href="https://gobby.github.io/">download Gobby</a> '
-          'and install it. Then start Gobby and select "Connect to Server" '
-          'and enter your {box_name}\'s domain name.'),
+        _('To use it, <a href="https://gobby.github.io/">download Gobby</a>, '
+        'desktop client and install it. Then start Gobby and select "Connect '
+          'to Server" and enter your {box_name}\'s domain name.'),
         box_name=_(cfg.box_name)),
 ]
 
@@ -58,12 +59,14 @@ def init():
     menu.add_urlname(title, 'glyphicon-pencil', 'infinoted:index')
 
     global service
-    service = service_module.Service(
-        managed_services[0], title, ports=['infinoted-plinth'],
-        is_external=True, enable=enable, disable=disable)
+    setup_helper = globals['setup_helper']
+    if setup_helper.get_state() != 'needs-setup':
+        service = service_module.Service(
+            managed_services[0], title, ports=['infinoted-plinth'],
+            is_external=True, enable=enable, disable=disable)
 
-    if service.is_enabled():
-        add_shortcut()
+        if service.is_enabled():
+            add_shortcut()
 
 
 class InfinotedServiceView(ServiceView):
@@ -76,13 +79,21 @@ def setup(helper, old_version=None):
     """Install and configure the module."""
     helper.install(managed_packages)
     helper.call('post', actions.superuser_run, 'infinoted', ['setup'])
+    global service
+    if service is None:
+        service = service_module.Service(
+            managed_services[0], title, ports=['infinoted-plinth'],
+            is_external=True, enable=enable, disable=disable)
+
     helper.call('post', service.notify_enabled, None, True)
     helper.call('post', add_shortcut)
 
 
 def add_shortcut():
-    frontpage.add_shortcut('infinoted', title, None, 'glyphicon-pencil',
-                           description)
+    frontpage.add_shortcut('infinoted', title, url=None,
+                           details=description,
+                           configure_url=reverse_lazy('infinoted:index'),
+                           login_required=False)
 
 
 def enable():
