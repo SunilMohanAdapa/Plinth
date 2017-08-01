@@ -192,7 +192,7 @@ def generate_apache_configuration(conf_file, domain_name):
     aug.defvar('conf',
                '/files' + conf_file)
 
-    aug.set('$conf/VirtualHost', None)
+    aug.set('$conf/VirtualHost', '')
     aug.defvar('vh', '$conf/VirtualHost')
     aug.set('$vh/arg', diaspora_domain_name)
     aug.set('$vh/directive[1]', 'ServerName')
@@ -200,18 +200,18 @@ def generate_apache_configuration(conf_file, domain_name):
     aug.set('$vh/directive[2]', 'DocumentRoot')
     aug.set('$vh/directive[2]/arg', '"/var/lib/diaspora/public/"')
 
-    aug.set('$vh/Location', None)
+    aug.set('$vh/Location', '')
     aug.set('$vh/Location/arg', '"/"')
     aug.set('$vh/Location/directive[1]', 'ProxyPass')
     aug.set('$vh/Location/directive[1]/arg',
             '"unix:/var/run/diaspora/diaspora.sock|http://localhost/"')
 
-    aug.set('$vh/Location[last() + 1]', None)
+    aug.set('$vh/Location[last() + 1]', '')
     aug.set('$vh/Location[last()]/arg', '"/assets"')
     aug.set('$vh/Location[last()]/directive[1]', 'ProxyPass')
     aug.set('$vh/Location[last()]/directive[1]/arg', '!')
 
-    aug.set('$vh/Directory', None)
+    aug.set('$vh/Directory', '')
     aug.set('$vh/Directory/arg', '/var/lib/diaspora/public/')
     aug.set('$vh/Directory/directive[1]', 'Require')
     aug.set('$vh/Directory/directive[1]/arg[1]', 'all')
