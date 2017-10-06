@@ -14,15 +14,36 @@ function get-interfaces {
     NO_OF_WIRELESS_IFACES=$(echo $WIRELESS_IFACES | wc -w)
 }
 
+function add-connection {
+    local connection_name="$1"
+    shift
+    local interface="$1"
+    shift
+    local remaining_arguments="$@"
+
+    already_exists=$(nmcli --terse --fields name,device con show | grep "$connection_name:$interface")
+    if [ -n "$already_exists" ]; then
+        echo "Connection '$connection_name' already exists for device '$interface', not adding."
+    else
+        nmcli con add con-name "$connection_name" ifname "$interface" $remaining_arguments
+    fi
+}
+
+function activate-connection {
+    connection_name="$1"
+    nohup nmcli con up "$connection_name" &>/dev/null &
+}
+
 function configure-regular-interface {
     local interface="$1"
     local zone="$2"
     local connection_name="FreedomBox WAN"
 
     # Create n-m connection for a regular interface
-    nmcli con add con-name "$connection_name" ifname "$interface" type ethernet
+    add-connection "$connection_name" "$interface" type ethernet
     nmcli con modify "$connection_name" connection.autoconnect TRUE
     nmcli con modify "$connection_name" connection.zone "$zone"
+    activate-connection "$connection_name"
 
     echo "Configured interface '$interface' for '$zone' use as '$connection_name'."
 }
@@ -32,7 +53,7 @@ function configure-shared-interface {
     local connection_name="FreedomBox LAN $interface"
 
     # Create n-m connection for eth1
-    nmcli con add con-name "$connection_name" ifname "$interface" type ethernet
+    add-connection "$connection_name" "$interface" type ethernet
     nmcli con modify "$connection_name" connection.autoconnect TRUE
     nmcli con modify "$connection_name" connection.zone internal
 
@@ -44,6 +65,8 @@ function configure-shared-interface {
     #  - Add firewall rules for NATing from this interface
     nmcli con modify "$connection_name" ipv4.method shared
 
+    activate-connection "$connection_name"
+
     echo "Configured interface '$interface' for shared use as '$connection_name'."
 }
 
@@ -53,13 +76,14 @@ function configure-wireless-interface {
     local ssid="FreedomBox$interface"
     local secret="freedombox123"
 
-    nmcli con add con-name "$connection_name" ifname "$interface" type wifi ssid "$ssid"
+    add-connection "$connection_name" "$interface" type wifi ssid "$ssid"
     nmcli con modify "$connection_name" connection.autoconnect TRUE
     nmcli con modify "$connection_name" connection.zone internal
     nmcli con modify "$connection_name" ipv4.method shared
     nmcli con modify "$connection_name" wifi.mode ap
     nmcli con modify "$connection_name" wifi-sec.key-mgmt wpa-psk
     nmcli con modify "$connection_name" wifi-sec.psk "$secret"
+    activate-connection "$connection_name"
 
     echo "Configured interface '$interface' for shared use as '$connection_name'."
 }
@@ -132,10 +156,6 @@ function setup {
 if [ -f "/var/lib/freedombox/is-freedombox-disk-image" ]
 then
     setup
-    # Restart network-manager so that the connections created will be activated.
-    # On a fresh disk image, this means the default network manager connections
-    # will be ignored and newly created connections will be activated.
-    systemctl restart network-manager
 else
     echo "Not a FreedomBox disk image. Skipping network configuration."
 fi
